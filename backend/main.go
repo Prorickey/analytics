@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,38 +12,36 @@ func main() {
 	MustConnect()
 	defer CloseDatabase()
 
+	// This will generate the database in the background
+	// It also sort of simulates normal conditions of an
+	// always growing database
 	doomAndDespair()
 
-	// router := gin.New()
+	router := gin.New()
 
-	// router.Use(gin.Recovery())
-	// router.Use(gin.Logger())
+	router.Use(gin.Recovery())
+	router.Use(gin.Logger())
 
-	// router.POST("/event/:event", PostEvent)
-	// router.POST("/login", PostLogin)
-	// router.GET("/analytics", AuthMiddlware, GetAnalytics)
+	router.POST("/event/:event", PostEvent)
+	router.POST("/login", PostLogin)
+	router.GET("/analytics", AuthMiddlware, GetAnalytics)
 
-	// router.Run("0.0.0.0:8080")
+	router.Run("0.0.0.0:8080")
 }
 
 func doomAndDespair() {
-	var wg sync.WaitGroup
+	const numThreads = 2
 
-	for range 10 {
-		wg.Add(1)
+	for range numThreads {
 		go func() {
-			_, err := glob_db.Exec("INSERT INTO analytics(event, timestamp) SELECT 'testEvent', NOW() - (random() * interval '7 days') FROM generate_series(1, 100000);")
-			if err != nil {
-				log.Fatalf("Error inserting into analytics: %v", err)
+			for {
+				_, err := glob_db.Exec("INSERT INTO analytics(event, timestamp) VALUES('testEvent', NOW() - (random() * interval '7 days'));")
+				if err != nil {
+					log.Fatalf("Error inserting into analytics: %v", err)
+				}
 			}
-
-			wg.Done()
 		}()
 	}
-
-	wg.Wait()
-
-	log.Println("Finished inserting")
 }
 
 const (
