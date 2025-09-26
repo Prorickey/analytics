@@ -42,6 +42,7 @@ func AuthMiddlware(ctx *gin.Context) {
 	if ValidateAuthorization(id, token) {
 		ctx.Next()
 	} else {
+		ctx.JSON(401, gin.H{"error": "invalid authentication"})
 		ctx.Abort()
 	}
 }

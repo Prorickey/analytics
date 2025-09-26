@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"math/rand/v2"
 	"strconv"
 	"sync"
 	"time"
@@ -15,45 +13,32 @@ func main() {
 	MustConnect()
 	defer CloseDatabase()
 
-	router := gin.New()
+	doomAndDespair()
 
-	router.Use(gin.Recovery())
-	router.Use(gin.Logger())
+	// router := gin.New()
 
-	router.POST("/event/:event", PostEvent)
-	router.POST("/login", PostLogin)
-	router.GET("/analytics", AuthMiddlware, GetAnalytics)
+	// router.Use(gin.Recovery())
+	// router.Use(gin.Logger())
 
-	router.Run("0.0.0.0:8080")
+	// router.POST("/event/:event", PostEvent)
+	// router.POST("/login", PostLogin)
+	// router.GET("/analytics", AuthMiddlware, GetAnalytics)
+
+	// router.Run("0.0.0.0:8080")
 }
 
 func doomAndDespair() {
-	stmt := "INSERT INTO analytics(event, timestamp) VALUES "
-	for range 50000 {
-		hoursBack := rand.IntN(24*7) * int(time.Hour)
-		timestamp := time.Now().Add(-time.Duration(hoursBack))
-
-		stmt = stmt + fmt.Sprintf("('testEvent', '%s'), ", timestamp.Format(time.RFC3339))
-	}
-
-	hoursBack := rand.IntN(24*7) * int(time.Hour)
-	timestamp := time.Now().Add(-time.Duration(hoursBack))
-
-	stmt = stmt + fmt.Sprintf("('testEvent', '%s')", timestamp.Format(time.RFC3339))
-
-	log.Println("Finished stmt string, starting insert")
-
 	var wg sync.WaitGroup
 
-	for range 100 {
+	for range 10 {
 		wg.Add(1)
 		go func() {
-			for range 100 {
-				_, err := glob_db.Exec(stmt)
-				if err != nil {
-					log.Fatalf("Error inserting into analytics: %v", err)
-				}
+			_, err := glob_db.Exec("INSERT INTO analytics(event, timestamp) SELECT 'testEvent', NOW() - (random() * interval '7 days') FROM generate_series(1, 100000);")
+			if err != nil {
+				log.Fatalf("Error inserting into analytics: %v", err)
 			}
+
+			wg.Done()
 		}()
 	}
 
