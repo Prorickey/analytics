@@ -98,6 +98,38 @@ type EventRecord struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+func GetGroupedRecords(event string, startTime time.Time, endTime time.Time, table string, window int) ([]GroupedRecord, error) {
+	stmt := fmt.Sprintf("SELECT timestamp, count FROM %s WHERE event=$1 AND timestamp>=$2 AND timestamp<=$3 ORDER BY timestamp", table)
+	rows, err := glob_db.Query(stmt, event, startTime, endTime)
+	if err != nil {
+		log.Printf("Error selecting from analytics: %v", err)
+		return []GroupedRecord{}, err 
+	}
+	defer rows.Close()
+
+	records := make([]GroupedRecord, 0)
+
+	for rows.Next() {
+		var record GroupedRecord
+		if err := rows.Scan(&record.Timestamp, &record.Count); err != nil {
+			log.Printf("Error scanning row: %v", err)
+			return records, err
+		}
+
+		record.Event = event 
+		record.Window = window
+
+		records = append(records, record)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error concerning rows: %v", err)
+		return records, err 
+	}
+
+	return records, nil
+}
+
 func GetEventRecords(event string, startTime time.Time, endTime time.Time) ([]EventRecord, error) {
 	rows, err := glob_db.Query("SELECT timestamp FROM analytics WHERE event=$1 AND timestamp>=$2 AND timestamp<=$3 ORDER BY timestamp", 
 	event, startTime, endTime)

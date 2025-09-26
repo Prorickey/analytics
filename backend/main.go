@@ -12,6 +12,8 @@ func main() {
 	MustConnect()
 	defer CloseDatabase()
 
+	log.Printf("testtest: %s", HashPassword("testtest"))
+
 	// This will generate the database in the background
 	// It also sort of simulates normal conditions of an
 	// always growing database
@@ -45,7 +47,7 @@ func doomAndDespair() {
 }
 
 const (
-	defaultWindow = 7 * 24 * time.Hour
+	defaultLength = 7 * 24 * time.Hour
 )
 
 func GetAnalytics(ctx *gin.Context) {
@@ -55,14 +57,14 @@ func GetAnalytics(ctx *gin.Context) {
 		return
 	}
 
-	windowSr := ctx.DefaultQuery("window", "5")
+	windowSr := ctx.DefaultQuery("window", "3600")
 	window, err := strconv.Atoi(windowSr)
 	if err != nil {
 		ctx.JSON(400, gin.H{"error": "malformed request"})
 		return
 	}
 
-	startTimeStr := ctx.DefaultQuery("startTime", time.Now().Add(-defaultWindow).UTC().Format(time.RFC3339))
+	startTimeStr := ctx.DefaultQuery("startTime", time.Now().Add(-defaultLength).UTC().Format(time.RFC3339))
 	endTimeStr := ctx.DefaultQuery("endTime", time.Now().UTC().Format(time.RFC3339))
 
 	startTime, err := time.Parse(time.RFC3339, startTimeStr)
@@ -77,16 +79,30 @@ func GetAnalytics(ctx *gin.Context) {
 		return 
 	}
 
-	records, err := GetEventRecords(event, startTime, endTime)
+	var records []GroupedRecord
+
+	if window * int(time.Second) == int(24 * time.Hour) {
+		records, err = GetGroupedRecords(event, startTime, endTime, "analytics_day", window)
+	} else if window * int(time.Second) == int(time.Hour) {
+		records, err = GetGroupedRecords(event, startTime, endTime, "analytics_hour", window)
+	} else if window * int(time.Second) == int(time.Minute) {
+		records, err = GetGroupedRecords(event, startTime, endTime, "analytics_minute", window)
+	} else {
+		recs, err := GetEventRecords(event, startTime, endTime)
+		if err != nil {
+			log.Printf("Error getting event records: %v", err)
+			ctx.JSON(500, gin.H{"error": "internal server error"})
+			return 
+		}
+
+		records = GroupRecords(event, recs, window)
+	}
+
 	if err != nil {
 		log.Printf("Error getting event records: %v", err)
 		ctx.JSON(500, gin.H{"error": "internal server error"})
 		return 
 	}
 
-	log.Printf("Number of records: %d", len(records))
-
-	groupedRecords := GroupRecords(event, records, window)
-
-	ctx.JSON(200, groupedRecords)
+	ctx.JSON(200, records)
 }
