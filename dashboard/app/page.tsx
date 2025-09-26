@@ -1,16 +1,8 @@
-"use client"
+import { auth, signIn, signOut } from "@/auth";
+import { Dashboard } from "@/components/dashboard";
 
-import { signIn, useSession } from "next-auth/react";
-
-export default function Home() {
-  const { data } = useSession()
-  const [id, token] = [data?.id, data?.token]
-
-  return (
-    <div>
-      <button onClick={() => signIn()}>
-        <p>Click me to login</p>
-      </button>
-    </div>
-  );
+export default async function Home() {
+  const session = await auth()
+  if(!session) return signIn()
+  return <Dashboard />
 }

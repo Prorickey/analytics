@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,6 +24,16 @@ func main() {
 
 	router.Use(gin.Recovery())
 	router.Use(gin.Logger())
+
+	config := cors.DefaultConfig()
+    config.AllowAllOrigins = true
+	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"} // Allow common HTTP methods
+	config.AllowHeaders = []string{"Origin", "Content-Type", "Authorization", "Accept", "User-Agent", "Cache-Control", "Pragma"} // Allow common headers
+	config.ExposeHeaders = []string{"Content-Length"} // Expose specific headers to the client
+	config.AllowCredentials = true // If you need to send cookies or authorization headers
+	config.MaxAge = 12 * time.Hour // Cache preflight requests for 12 hours
+
+	router.Use(cors.New(config))
 
 	router.POST("/event/:event", PostEvent)
 	router.POST("/login", PostLogin)
