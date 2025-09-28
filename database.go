@@ -10,19 +10,12 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const (
-	host		= "localhost"
-	port		= 5432
-	user		= "postgres"
-	password 	= "password"
-	dbname	 	= "postgres"
-)
-
 var glob_db *sql.DB
 
 func MustConnect() {
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-	host, port, user, password, dbname)
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+	os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_USER"),
+	os.Getenv("DB_PASSWORD"), os.Getenv("DB_DATABASE"))
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
@@ -34,9 +27,17 @@ func MustConnect() {
 		log.Fatalf("Error pinging database: %v", err)
 	}
 
-	dat, err := os.ReadFile("./schema.sql")
-	if err != nil {
-		log.Fatalf("Error reading schema file: %v", err)
+	var dat []byte
+	if os.Getenv("GIN_MODE") == "release" {
+		dat, err = os.ReadFile("/root/schema.sql")
+		if err != nil {
+			log.Fatalf("Error reading schema file: %v", err)
+		}
+	} else {
+		dat, err = os.ReadFile("./schema.sql")
+		if err != nil {
+			log.Fatalf("Error reading schema file: %v", err)
+		}
 	}
 
 	schema := string(dat)
@@ -64,33 +65,9 @@ func CreateEvent(event string, metadata string) error {
 	return nil
 }
 
-type User struct {
-	Id string `json:"id"`
-	Digest string `json:"-"`
-	Token string `json:"token"`
-}
-
-func LoginAccount(username string, password string) (User, error) {
-	var user User
-	err := glob_db.QueryRow("SELECT id, digest, token FROM users WHERE username=$1", username).Scan(&user.Id, &user.Digest, &user.Token)
-	if err != nil {
-		if err != sql.ErrNoRows {
-			log.Printf("Error selecting user: %v", err)
-		}
-
-		return User{}, err
-	}
-
-	if ValidatePassword(password, user.Digest) {
-		return user, nil
-	} else {
-		return User{}, fmt.Errorf("invalid password")
-	}
-}
-
 func ValidateAuthorization(id string, token string) bool {
 	var temp string
-	err := glob_db.QueryRow("SELECT username FROM users WHERE id=$1 AND token=$2", id, token).Scan(&temp)
+	err := glob_db.QueryRow("SELECT service FROM service_auth WHERE id=$1 AND token=$2", id, token).Scan(&temp)
 	return err == nil
 }
 

@@ -76,10 +76,9 @@ CREATE OR REPLACE TRIGGER analytics_insert_trigger_day
 AFTER INSERT ON analytics
 FOR EACH ROW EXECUTE FUNCTION increment_analytics_day();
 
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS service_auth (
     id UUID DEFAULT gen_random_uuid(),
-    username TEXT NOT NULL,
-    digest TEXT NOT NULL,
+    service TEXT NOT NULL,
     token TEXT DEFAULT gen_random_uuid()
 );
 

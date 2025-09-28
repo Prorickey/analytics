@@ -7,7 +7,10 @@ require (
 	github.com/lib/pq v1.10.9
 )
 
-require github.com/gin-contrib/cors v1.7.6 // indirect
+require (
+	github.com/gin-contrib/cors v1.7.6 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
+)
 
 require (
 	github.com/bytedance/sonic v1.14.0 // indirect

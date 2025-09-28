@@ -2,23 +2,28 @@ package main
 
 import (
 	"log"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil && os.Getenv("GIN_MODE") != "release" {
+		log.Fatal("Error loading .env file")
+	}
+
 	MustConnect()
 	defer CloseDatabase()
-
-	log.Printf("testtest: %s", HashPassword("testtest"))
 
 	// This will generate the database in the background
 	// It also sort of simulates normal conditions of an
 	// always growing database
-	doomAndDespair()
+	// doomAndDespair()
 
 	router := gin.New()
 
@@ -36,7 +41,6 @@ func main() {
 	router.Use(cors.New(config))
 
 	router.POST("/event/:event", PostEvent)
-	router.POST("/login", PostLogin)
 	router.GET("/analytics", AuthMiddlware, GetAnalytics)
 
 	router.Run("0.0.0.0:8080")
